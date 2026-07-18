@@ -1,7 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+let supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+if (supabaseUrl) {
+  // Clean URL: strip trailing /rest/v1/ and trailing slashes
+  supabaseUrl = supabaseUrl.replace(/\/rest\/v1\/?$/, '').replace(/\/+$/, '');
+}
 
 if (!supabaseUrl || !supabaseAnonKey) {
   console.error('Missing Supabase credentials in environment variables!');
