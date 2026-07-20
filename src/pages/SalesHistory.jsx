@@ -26,10 +26,25 @@ export default function SalesHistory() {
   
   // Re-print modal state
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [storeSettings, setStoreSettings] = useState(null);
 
   useEffect(() => {
     fetchSales();
+    fetchStoreSettings();
   }, [dateFilter, startDate, endDate]);
+
+  const fetchStoreSettings = async () => {
+    try {
+      const { data } = await supabase
+        .from('settings')
+        .select('*')
+        .eq('id', 'store_config')
+        .single();
+      if (data) setStoreSettings(data);
+    } catch (err) {
+      console.error('Error fetching store settings:', err.message);
+    }
+  };
 
   const fetchSales = async () => {
     setLoading(true);
@@ -52,7 +67,8 @@ export default function SalesHistory() {
       // Apply date filters
       const now = new Date();
       if (dateFilter === 'today') {
-        const start = new Date(now.setHours(0,0,0,0)).toISOString();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const start = todayStart.toISOString();
         query = query.gte('date', start);
       } else if (dateFilter === 'yesterday') {
         const yesterday = new Date();
@@ -303,10 +319,11 @@ export default function SalesHistory() {
           {/* Printable Layout Container */}
           <div className="glass-panel print-area thermal-receipt" style={{ background: 'white', color: 'black', padding: '24px', borderRadius: '8px', maxWidth: '360px', width: '100%', maxHeight: '75vh', overflowY: 'auto' }}>
             <div style={{ textAlign: 'center', marginBottom: '16px', borderBottom: '1px dashed #ccc', paddingBottom: '16px' }}>
-              <h2 style={{ fontSize: '1.2rem', color: '#000' }}>RETAIL GENIUS</h2>
-              <p style={{ fontSize: '0.75rem', color: '#555' }}>GSTIN: 27AAAAA1111A1Z1</p>
-              <p style={{ fontSize: '0.75rem', color: '#555' }}>123 Smart Retail Ave, Tech Hub</p>
-              <p style={{ fontSize: '0.75rem', color: '#555' }}>Tel: 9876543210</p>
+              <h2 style={{ fontSize: '1.2rem', color: '#000' }}>{storeSettings?.store_name || 'RETAIL GENIUS'}</h2>
+              {storeSettings?.gst_number && <p style={{ fontSize: '0.75rem', color: '#555' }}>GSTIN: {storeSettings.gst_number}</p>}
+              {storeSettings?.address && <p style={{ fontSize: '0.75rem', color: '#555' }}>{storeSettings.address}</p>}
+              {storeSettings?.phone && <p style={{ fontSize: '0.75rem', color: '#555' }}>Tel: {storeSettings.phone}</p>}
+              {storeSettings?.email && <p style={{ fontSize: '0.75rem', color: '#555' }}>Email: {storeSettings.email}</p>}
             </div>
 
             <div style={{ fontSize: '0.75rem', marginBottom: '12px', borderBottom: '1px dashed #ccc', paddingBottom: '12px' }}>
@@ -335,19 +352,19 @@ export default function SalesHistory() {
             </table>
 
             <div style={{ borderTop: '1px dashed #ccc', paddingTop: '12px', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-              <div style={{ display: 'flex', justifyContext: 'space-between', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Subtotal:</span>
                 <span>₹{parseFloat(selectedInvoice.subtotal).toFixed(2)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContext: 'space-between', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Discount:</span>
-                <span>-₹{parseFloat(selectedInvoice.discount_amount).toFixed(2)}</span>
+                <span>-₹{parseFloat(selectedInvoice.discount_amount || 0).toFixed(2)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContext: 'space-between', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>GST:</span>
-                <span>₹{parseFloat(selectedInvoice.tax_amount).toFixed(2)}</span>
+                <span>₹{parseFloat(selectedInvoice.tax_amount || 0).toFixed(2)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContext: 'space-between', fontWeight: 'bold', fontSize: '0.9rem', borderTop: '1px dashed #000', paddingTop: '6px', marginTop: '4px', justifyContent: 'space-between' }}>
+              <div style={{ display: 'flex', fontWeight: 'bold', fontSize: '0.9rem', borderTop: '1px dashed #000', paddingTop: '6px', marginTop: '4px', justifyContent: 'space-between' }}>
                 <span>Grand Total:</span>
                 <span>₹{parseFloat(selectedInvoice.grand_total).toFixed(2)}</span>
               </div>

@@ -182,7 +182,7 @@ export default function Reports() {
     }
 
     const csvContent = "data:text/csv;charset=utf-8," 
-      + [headers.join(','), ...rows.map(e => e.map(val => `"${val}"`).join(","))].join("\n");
+      + [headers.join(','), ...rows.map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(","))].join("\n");
 
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement("a");
@@ -275,7 +275,7 @@ export default function Reports() {
             <div>
               <div className="dashboard-grid" style={{ marginBottom: '24px' }}>
                 <div className="glass-panel" style={summaryCardStyle}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(114, 52, 237, 0.1)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContext: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(114, 52, 237, 0.1)', color: 'var(--primary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <TrendingUp size={24} />
                   </div>
                   <div>
@@ -285,7 +285,7 @@ export default function Reports() {
                 </div>
 
                 <div className="glass-panel" style={summaryCardStyle}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContext: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(16, 185, 129, 0.1)', color: 'var(--success)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <DollarSign size={24} />
                   </div>
                   <div>
@@ -295,7 +295,7 @@ export default function Reports() {
                 </div>
 
                 <div className="glass-panel" style={summaryCardStyle}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(6, 182, 212, 0.1)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContext: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(6, 182, 212, 0.1)', color: 'var(--accent)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <BarChart size={24} />
                   </div>
                   <div>
@@ -305,7 +305,7 @@ export default function Reports() {
                 </div>
 
                 <div className="glass-panel" style={summaryCardStyle}>
-                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', display: 'flex', alignItems: 'center', justifyContext: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <Percent size={24} />
                   </div>
                   <div>

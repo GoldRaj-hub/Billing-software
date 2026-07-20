@@ -113,18 +113,6 @@ export default function Sidebar() {
               key={item.path} 
               to={item.path} 
               style={navLinkStyle}
-              onMouseEnter={(e) => {
-                if (!e.currentTarget.style.background.includes('var(--primary)')) {
-                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
-                  e.currentTarget.style.color = '#fff';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!e.currentTarget.style.background.includes('var(--primary)')) {
-                  e.currentTarget.style.background = 'transparent';
-                  e.currentTarget.style.color = 'rgba(255, 255, 255, 0.7)';
-                }
-              }}
             >
               <Icon size={20} />
               <span>{item.label}</span>

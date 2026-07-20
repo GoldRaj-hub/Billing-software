@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { supabase } from '../services/supabaseClient';
 
 export const useAuthStore = create((set, get) => ({
+  _authSubscription: null,
   user: null,
   profile: null,
   loading: true,
@@ -23,7 +24,7 @@ export const useAuthStore = create((set, get) => ({
       }
 
       // 2. Set up auth state change subscription
-      supabase.auth.onAuthStateChange(async (event, currentSession) => {
+      const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, currentSession) => {
         if (currentSession) {
           set({ user: currentSession.user });
           await get().fetchProfile(currentSession.user.id);
@@ -31,6 +32,7 @@ export const useAuthStore = create((set, get) => ({
           set({ user: null, profile: null, loading: false });
         }
       });
+      set({ _authSubscription: subscription });
     } catch (err) {
       set({ error: err.message, loading: false });
     }

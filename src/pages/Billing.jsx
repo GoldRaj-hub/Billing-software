@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
 import { useAuthStore } from '../store/authStore';
@@ -64,12 +64,14 @@ export default function Billing() {
   const [customers, setCustomers] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [customerSearch, setCustomerSearch] = useState('');
+  const [showAllProducts, setShowAllProducts] = useState(false);
   const [storeSettings, setStoreSettings] = useState({
     store_name: 'Retail Genius Store',
     gst_number: '',
     address: '',
     phone: '',
     email: '',
+    invoice_prefix: 'RG',
     tax_settings: { default_gst: 18, inclusive_tax: false },
     printer_settings: { receipt_width: '80mm' }
   });
@@ -99,8 +101,10 @@ export default function Billing() {
 
   useEffect(() => {
     fetchBillingMetadata();
-    
-    // Register hardware barcode keypress listeners
+  }, []);
+
+  // Register hardware barcode keypress listeners with proper cleanup
+  useEffect(() => {
     window.addEventListener('keydown', handleGlobalKeydown);
     return () => {
       window.removeEventListener('keydown', handleGlobalKeydown);
@@ -108,7 +112,7 @@ export default function Billing() {
         qrScannerRef.current.clear().catch(console.error);
       }
     };
-  }, []);
+  }, [handleGlobalKeydown]);
 
   // Update searchQuery if location search param changes (?q=...)
   useEffect(() => {
@@ -158,8 +162,8 @@ export default function Billing() {
     }
   };
 
-  // 1. Hardware Barcode Scanner Listener
-  const handleGlobalKeydown = (e) => {
+  // 1. Hardware Barcode Scanner Listener (wrapped in useCallback to avoid stale closures)
+  const handleGlobalKeydown = useCallback((e) => {
     // If typing in input fields, ignore scanner listener
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
       // Allow F-shortcuts
@@ -167,6 +171,16 @@ export default function Billing() {
         e.preventDefault();
         setIsCheckoutOpen(true);
       }
+      return;
+    }
+
+    // Close modals on Escape
+    if (e.key === 'Escape') {
+      setIsCustomerModalOpen(false);
+      setIsHoldsModalOpen(false);
+      setIsCheckoutOpen(false);
+      setIsScannerOpen(false);
+      setLastInvoice(null);
       return;
     }
 
@@ -204,9 +218,9 @@ export default function Billing() {
       e.preventDefault();
       if (confirm('Clear entire cart?')) clearCart();
     }
-  };
+  }, [products, addToCart, holdBill, clearCart]);
 
-  const processBarcodeScan = (barcode) => {
+  const processBarcodeScan = useCallback((barcode) => {
     // Find matching product
     const matched = products.find(p => p.barcode === barcode || p.sku === barcode);
     if (matched) {
@@ -223,7 +237,7 @@ export default function Billing() {
     } else {
       alert(`Barcode "${barcode}" not matched in products database.`);
     }
-  };
+  }, [products, addToCart]);
 
   // 2. Camera QR/Barcode Scanner
   const startCameraScanner = () => {
@@ -270,8 +284,10 @@ export default function Billing() {
     if (cart.length === 0) return alert('Cart is empty.');
     setIsCheckingOut(true);
     try {
-      const totals = getTotals();
-      const uniqueBillNo = `INV-${Date.now().toString().slice(-6)}`;
+      const inclusiveTax = storeSettings?.tax_settings?.inclusive_tax || false;
+      const totals = getTotals(inclusiveTax);
+      const prefix = storeSettings?.invoice_prefix || 'RG';
+      const uniqueBillNo = `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
       
       // 1. Save Sale to Supabase
       const { data: saleData, error: saleErr } = await supabase
@@ -351,7 +367,8 @@ export default function Billing() {
            (p.barcode && p.barcode.includes(searchQuery));
   });
 
-  const totals = getTotals();
+  const inclusiveTax = storeSettings?.tax_settings?.inclusive_tax || false;
+  const totals = getTotals(inclusiveTax);
 
   return (
     <div className="page-wrapper" style={{ height: 'calc(100vh - 84px)', display: 'flex', flexDirection: 'column' }}>
@@ -411,7 +428,7 @@ export default function Billing() {
 
           {/* Grid list of matched products */}
           <div style={{ flex: 1, overflowY: 'auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '12px', alignContent: 'start' }}>
-            {matchedProducts.slice(0, 24).map(p => {
+            {(showAllProducts ? matchedProducts : matchedProducts.slice(0, 24)).map(p => {
               const isOut = p.current_stock === 0;
               return (
                 <div 
@@ -444,6 +461,24 @@ export default function Billing() {
                 </div>
               );
             })}
+            {!showAllProducts && matchedProducts.length > 24 && (
+              <button
+                onClick={() => setShowAllProducts(true)}
+                className="btn btn-secondary"
+                style={{ gridColumn: '1 / -1', padding: '12px', fontSize: '0.85rem' }}
+              >
+                Show all {matchedProducts.length} products
+              </button>
+            )}
+            {showAllProducts && matchedProducts.length > 24 && (
+              <button
+                onClick={() => setShowAllProducts(false)}
+                className="btn btn-secondary"
+                style={{ gridColumn: '1 / -1', padding: '12px', fontSize: '0.85rem' }}
+              >
+                Show less
+              </button>
+            )}
           </div>
         </div>
 
@@ -470,8 +505,8 @@ export default function Billing() {
                 <span>Standard checkout cart is empty</span>
               </div>
             ) : (
-              cart.map((item, idx) => (
-                <div key={idx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
+              cart.map((item) => (
+                <div key={item.product.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--border)' }}>
                   <div style={{ flex: 1, marginRight: '12px' }}>
                     <h4 style={{ fontSize: '0.85rem', fontWeight: 600 }}>{item.product.name}</h4>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>
@@ -761,7 +796,7 @@ export default function Billing() {
               onClick={executeCheckout} 
               className="btn btn-primary" 
               style={{ width: '100%', marginTop: '16px' }}
-              disabled={isCheckingOut || (paymentMethod === 'Cash' && parseFloat(cashReceived) < totals.grandTotal)}
+              disabled={isCheckingOut || (paymentMethod === 'Cash' && (!cashReceived || isNaN(parseFloat(cashReceived)) || parseFloat(cashReceived) < totals.grandTotal))}
             >
               {isCheckingOut ? 'Saving transaction...' : 'Collect & Print Invoice'}
             </button>

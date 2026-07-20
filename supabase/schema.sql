@@ -234,11 +234,19 @@ BEGIN
         END IF;
     END IF;
 
-    -- If sale status changes to Returned/Refunded, adjust stock back
+    -- If sale status changes to Returned/Refunded, adjust stock back and deduct loyalty points
     IF (new.status = 'Returned' OR new.status = 'Refunded') AND (old.status = 'Completed') THEN
+        -- Deduct the loyalty points that were previously awarded
+        IF new.customer_id IS NOT NULL THEN
+            calculated_points := FLOOR(new.grand_total / 10)::INTEGER;
+            IF calculated_points > 0 THEN
+                UPDATE public.customers
+                SET reward_points = GREATEST(0, reward_points - calculated_points)
+                WHERE id = new.customer_id;
+            END IF;
+        END IF;
+
         -- Restore inventory stock for each sale item
-        -- (To do this cleanly, we loop over sale items and execute stock increments)
-        -- Since this runs on sales update, we write a quick sub-routine
         PERFORM public.restore_stock_on_return(new.id, new.cashier_id);
     END IF;
 

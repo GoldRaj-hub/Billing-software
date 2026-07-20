@@ -172,7 +172,7 @@ export const useBillingStore = create((set, get) => ({
   },
 
   // Calculate Subtotals, Taxes, Discounts & Grand Total
-  getTotals: () => {
+  getTotals: (inclusiveTax = false) => {
     const { cart, discountType, discountValue, taxRate, extraCharges, couponDiscount } = get();
     
     // Subtotal = sum(quantity * unit_selling_price)
@@ -193,14 +193,38 @@ export const useBillingStore = create((set, get) => ({
     const totalDiscount = cartDiscount + couponDiscount;
 
     // Subtotal after discount
-    const taxableAmount = Math.max(0, subtotal - totalDiscount);
+    const afterDiscount = Math.max(0, subtotal - totalDiscount);
 
-    // GST calculation
-    // If tax settings are simple, we apply the configured flat rate on the taxable total
-    const taxAmount = (taxableAmount * taxRate) / 100;
+    // Per-product GST calculation
+    // Distribute the discount proportionally across items
+    const discountRatio = subtotal > 0 ? afterDiscount / subtotal : 0;
+    let taxAmount = 0;
 
-    // Grand Total = Taxable amount + GST + Extra Charges
-    const grandTotal = taxableAmount + taxAmount + extraCharges;
+    cart.forEach(item => {
+      const price = item.customPrice !== null ? item.customPrice : item.product.selling_price;
+      const itemTotal = price * item.quantity;
+      const itemAfterDiscount = itemTotal * discountRatio;
+      const itemGstRate = item.product.gst_rate != null ? parseFloat(item.product.gst_rate) : taxRate;
+
+      if (inclusiveTax) {
+        // For inclusive tax, the price already contains tax
+        // Tax = itemAfterDiscount - (itemAfterDiscount / (1 + rate/100))
+        taxAmount += itemAfterDiscount - (itemAfterDiscount / (1 + itemGstRate / 100));
+      } else {
+        // For exclusive tax, add tax on top
+        taxAmount += (itemAfterDiscount * itemGstRate) / 100;
+      }
+    });
+
+    // Grand Total
+    let grandTotal;
+    if (inclusiveTax) {
+      // Price already includes tax, so grand total = afterDiscount + extra charges
+      grandTotal = afterDiscount + extraCharges;
+    } else {
+      // Tax is added on top
+      grandTotal = afterDiscount + taxAmount + extraCharges;
+    }
 
     return {
       subtotal: parseFloat(subtotal.toFixed(2)),

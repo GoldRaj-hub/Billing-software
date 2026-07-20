@@ -27,7 +27,6 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState('Cashier');
   
   // Custom message triggers
   const [infoMsg, setInfoMsg] = useState('');
@@ -85,7 +84,7 @@ export default function Login() {
         options: {
           data: {
             name,
-            role
+            role: 'Cashier'
           }
         }
       });
@@ -266,18 +265,7 @@ export default function Login() {
               </div>
             </div>
 
-            <div className="form-group">
-              <label className="form-label">System Role</label>
-              <select 
-                value={role} 
-                onChange={(e) => setRole(e.target.value)}
-                className="input-field"
-              >
-                <option value="Cashier">Cashier (Billing POS only)</option>
-                <option value="Manager">Manager (Billing + Stock + Dashboard)</option>
-                <option value="Admin">Admin (Full System Controls)</option>
-              </select>
-            </div>
+
 
             <button type="submit" className="btn btn-primary" style={{ width: '100%', marginTop: '8px' }} disabled={loading}>
               {loading ? 'Creating account...' : 'Register Staff Account'}

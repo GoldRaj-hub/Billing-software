@@ -141,6 +141,7 @@ export default function Settings() {
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+      URL.revokeObjectURL(url);
 
       setInfoMsg('Database backup package downloaded.');
     } catch (err) {
@@ -229,7 +230,7 @@ export default function Settings() {
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Invoice Invoice Prefix</label>
+                  <label className="form-label">Invoice Prefix</label>
                   <input 
                     type="text" 
                     value={settings.invoice_prefix} 

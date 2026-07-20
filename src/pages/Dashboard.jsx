@@ -154,15 +154,39 @@ export default function Dashboard() {
 
       setChartData(last7Days.map(d => ({ name: d.name, Sales: parseFloat(d.sales.toFixed(2)) })));
 
-      // 6. Fetch Top Selling Products
-      // We will perform a simple join or fetch a mocked-up top selling from active stock
-      const { data: popular, error: popError } = await supabase
-        .from('products')
-        .select('name, current_stock, selling_price, brand')
-        .order('selling_price', { ascending: false })
-        .limit(4);
-      
-      if (popular) setTopProducts(popular);
+      // 6. Fetch Top Selling Products based on actual sales volume
+      const { data: topSaleItems, error: topErr } = await supabase
+        .from('sale_items')
+        .select('product_id, quantity, products ( name, selling_price, current_stock, brand )');
+
+      if (topSaleItems && topSaleItems.length > 0) {
+        // Aggregate quantities by product
+        const productMap = {};
+        topSaleItems.forEach(item => {
+          if (!item.products) return;
+          const pid = item.product_id;
+          if (!productMap[pid]) {
+            productMap[pid] = {
+              name: item.products.name,
+              selling_price: item.products.selling_price,
+              current_stock: item.products.current_stock,
+              brand: item.products.brand,
+              totalQty: 0
+            };
+          }
+          productMap[pid].totalQty += item.quantity;
+        });
+        const sorted = Object.values(productMap).sort((a, b) => b.totalQty - a.totalQty).slice(0, 4);
+        setTopProducts(sorted);
+      } else {
+        // Fallback: show most expensive products if no sales data exists
+        const { data: popular } = await supabase
+          .from('products')
+          .select('name, current_stock, selling_price, brand')
+          .order('selling_price', { ascending: false })
+          .limit(4);
+        if (popular) setTopProducts(popular);
+      }
 
     } catch (err) {
       console.error('Error fetching dashboard stats:', err);
