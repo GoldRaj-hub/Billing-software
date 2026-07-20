@@ -327,16 +327,33 @@ export default function Billing() {
         .from('sale_items')
         .insert(itemsToInsert);
 
-      if (itemsErr) throw itemsErr;
+      if (itemsErr) {
+        await supabase.from('sales').delete().eq('id', saleId);
+        throw itemsErr;
+      }
 
       // 3. Save Payments details
-      await supabase
+      const { error: payErr } = await supabase
         .from('payments')
         .insert([{
           sale_id: saleId,
           amount: totals.grandTotal,
           payment_method: paymentMethod
         }]);
+        
+      if (payErr) {
+        await supabase.from('sales').delete().eq('id', saleId);
+        throw payErr;
+      }
+
+      // 4. Deduct Stock
+      for (const item of cart) {
+        const newStock = Math.max(0, item.product.current_stock - item.quantity);
+        await supabase
+          .from('products')
+          .update({ current_stock: newStock })
+          .eq('id', item.product.id);
+      }
 
       setCheckoutBillNumber(uniqueBillNo);
       setLastInvoice({

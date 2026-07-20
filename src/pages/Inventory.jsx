@@ -280,7 +280,7 @@ export default function Inventory() {
     if (!adjustQty || !adjustProduct) return;
     try {
       const qtyChange = parseInt(adjustQty);
-      const absoluteChange = adjustType === 'Purchase' ? qtyChange : qtyChange; // purchase increments, manual adjustment could be positive or negative
+      const absoluteChange = adjustType === 'Purchase' ? Math.abs(qtyChange) : qtyChange; // purchase strictly increments, manual adjustment can be pos or neg
       
       const newStock = Math.max(0, adjustProduct.current_stock + absoluteChange);
 
@@ -318,7 +318,7 @@ export default function Inventory() {
 
   // Filter products based on inputs
   const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase()) || 
+    const matchesSearch = (p.name || '').toLowerCase().includes(search.toLowerCase()) || 
                           (p.sku && p.sku.toLowerCase().includes(search.toLowerCase())) ||
                           (p.barcode && p.barcode.includes(search));
     const matchesCategory = selectedCategory ? p.category_id === selectedCategory : true;

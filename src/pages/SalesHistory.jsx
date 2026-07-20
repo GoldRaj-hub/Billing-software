@@ -103,12 +103,40 @@ export default function SalesHistory() {
   const handleReturnInvoice = async (saleId) => {
     if (!confirm('Are you sure you want to mark this transaction as RETURNED? This will automatically restore all product stocks.')) return;
     try {
+      // 1. Fetch the sale items to restore stock
+      const { data: saleItems, error: fetchErr } = await supabase
+        .from('sale_items')
+        .select('product_id, quantity')
+        .eq('sale_id', saleId);
+        
+      if (fetchErr) throw fetchErr;
+
+      // 2. Mark as returned
       const { error } = await supabase
         .from('sales')
         .update({ status: 'Returned' })
         .eq('id', saleId);
 
       if (error) throw error;
+      
+      // 3. Restore stock
+      if (saleItems) {
+        for (const item of saleItems) {
+          const { data: productData } = await supabase
+            .from('products')
+            .select('current_stock')
+            .eq('id', item.product_id)
+            .single();
+            
+          if (productData) {
+            await supabase
+              .from('products')
+              .update({ current_stock: productData.current_stock + item.quantity })
+              .eq('id', item.product_id);
+          }
+        }
+      }
+
       fetchSales();
       alert('Invoice status updated. Stock has been incremented.');
     } catch (err) {
@@ -138,10 +166,10 @@ export default function SalesHistory() {
   // Filter list matching search query
   const filteredSales = sales.filter(s => {
     const term = search.toLowerCase();
-    const billMatch = s.bill_number.toLowerCase().includes(term);
+    const billMatch = (s.bill_number || '').toLowerCase().includes(term);
     const customerMatch = s.customers?.name?.toLowerCase().includes(term) || false;
-    const phoneMatch = s.customers?.phone?.includes(term) || false;
-    const amountMatch = s.grand_total.toString().includes(term);
+    const phoneMatch = String(s.customers?.phone || '').includes(term) || false;
+    const amountMatch = (s.grand_total || 0).toString().includes(term);
     return billMatch || customerMatch || phoneMatch || amountMatch;
   });
 
