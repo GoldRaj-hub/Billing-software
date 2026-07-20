@@ -2,9 +2,6 @@ const CACHE_NAME = 'retail-genius-cache-v1';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
-  '/src/main.jsx',
-  '/src/App.jsx',
-  '/src/index.css',
   '/favicon.ico',
   '/manifest.json'
 ];
