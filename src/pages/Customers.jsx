@@ -121,16 +121,16 @@ export default function Customers() {
   const startEdit = (cust) => {
     setEditingCust(cust);
     setFormData({
-      name: cust.name,
-      phone: cust.phone,
+      name: cust.name || '',
+      phone: cust.phone || '',
       email: cust.email || '',
       address: cust.address || '',
       gst_number: cust.gst_number || '',
       birthday: cust.birthday || '',
       anniversary: cust.anniversary || '',
       notes: cust.notes || '',
-      reward_points: cust.reward_points.toString(),
-      outstanding_balance: cust.outstanding_balance.toString()
+      reward_points: (cust.reward_points || 0).toString(),
+      outstanding_balance: (cust.outstanding_balance || 0).toString()
     });
     setIsModalOpen(true);
   };
@@ -169,8 +169,8 @@ export default function Customers() {
   };
 
   const filteredCustomers = customers.filter(c => 
-    c.name.toLowerCase().includes(search.toLowerCase()) || 
-    c.phone.includes(search) ||
+    (c.name || '').toLowerCase().includes(search.toLowerCase()) || 
+    String(c.phone || '').includes(search) ||
     (c.email && c.email.toLowerCase().includes(search.toLowerCase()))
   );
 
