@@ -379,9 +379,9 @@ export default function Billing() {
 
   // Instantly search matching products locally
   const matchedProducts = products.filter(p => {
-    return p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-           (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase())) ||
-           (p.barcode && p.barcode.includes(searchQuery));
+    return (p.name || '').toLowerCase().includes(searchQuery.toLowerCase()) || 
+           (p.sku && String(p.sku).toLowerCase().includes(searchQuery.toLowerCase())) ||
+           (p.barcode && String(p.barcode).includes(searchQuery));
   });
 
   const inclusiveTax = storeSettings?.tax_settings?.inclusive_tax || false;
